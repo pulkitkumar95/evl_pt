@@ -88,7 +88,8 @@ def main():
     parser.add_argument('--batch_split', type=int, default=1,
                         help='optionally split the batch into smaller shards and forward/backward one shard '
                              'at a time to avoid out-of-memory error.')
-
+    parser.add_argument('--vid_base_dir', type=str, default='/fs/vulcan-datasets/Kinetics-400/',
+                        help='base directory for video files')
     args = parser.parse_args()
 
     dist.init_process_group('nccl')
