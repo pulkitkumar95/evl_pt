@@ -19,7 +19,7 @@ class VideoDataset(torch.utils.data.Dataset):
         num_frames: int, sampling_rate: int, spatial_size: int,
         mean: torch.Tensor, std: torch.Tensor,
         auto_augment: Optional[str] = None, interpolation: str = 'bicubic',
-        mirror: bool = False,
+        mirror: bool = False, cfg: Optional[dict] = None,
     ):
         self.data_root = data_root
         self.interpolation = interpolation
@@ -41,6 +41,8 @@ class VideoDataset(torch.utils.data.Dataset):
 
         with open(list_path) as f:
             self.data_list = f.read().splitlines()
+        self.cfg = cfg
+        self.vid_base_dir = cfg.vid_base_dir
 
 
     def __len__(self):
@@ -53,7 +55,7 @@ class VideoDataset(torch.utils.data.Dataset):
         path = os.path.join(self.data_root, path)
         label = int(label)
 
-        container = av.open(path)
+        container = av.open(os.path.join(self.vid_base_dir, path))
         frames = {}
         for frame in container.decode(video=0):
             frames[frame.pts] = frame
@@ -74,6 +76,7 @@ class VideoDataset(torch.utils.data.Dataset):
                 frames = frames.permute(0, 3, 1, 2) # T, C, H, W
                 frames = [transforms.ToPILImage()(frames[i]) for i in range(frames.size(0))]
                 frames = aug_transform(frames)
+
                 frames = torch.stack([transforms.ToTensor()(img) for img in frames])
                 frames = frames.permute(0, 2, 3, 1)
 

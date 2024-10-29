@@ -90,7 +90,7 @@ def create_train_dataset(args: argparse.Namespace) -> torch.utils.data.Dataset:
         mirror=args.mirror,
         num_frames=args.num_frames,
         sampling_rate=-1 if args.tsn_sampling else args.sampling_rate,
-        spatial_size=args.spatial_size,
+        spatial_size=args.spatial_size, cfg=args,
         **_parse_mean_and_std(args),
     )
 
@@ -137,7 +137,7 @@ def create_val_dataset(args: argparse.Namespace) -> torch.utils.data.Dataset:
         random_sample=False,
         num_frames=args.num_frames,
         sampling_rate=-1 if args.tsn_sampling else args.sampling_rate,
-        spatial_size=args.spatial_size,
+        spatial_size=args.spatial_size, cfg=args,
         **_parse_mean_and_std(args),
     )
 
