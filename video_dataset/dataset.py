@@ -50,6 +50,8 @@ class VideoDataset(torch.utils.data.Dataset):
             self.data_list = f.read().splitlines()
         self.cfg = cfg
         self.vid_base_dir = cfg.vid_base_dir
+        if 'SCRATCH_DIR' in os.environ and 'SCRATCH_DIR' in self.vid_base_dir:
+            self.vid_base_dir  = self.vid_base_dir.replace('$SCRATCH_DIR', os.environ['SCRATCH_DIR'])
         if cfg.dataset == 'ssv2':
             self.vid_base_dir = os.path.join(self.vid_base_dir, 
                                              '20bn-something-something-v2')
