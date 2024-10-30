@@ -150,7 +150,7 @@ def create_val_loader(args: argparse.Namespace) -> torch.utils.data.Dataset:
     sampler = list(range(rank, len(dataset), world_size))
 
     loader = torch.utils.data.DataLoader(
-        dataset, sampler=sampler, batch_size=1,
+        dataset, sampler=sampler, batch_size=args.test_batch_size,
         num_workers=args.num_workers, pin_memory=False,
     )
 

@@ -140,6 +140,8 @@ def main():
 
     parser.add_argument('--lr', type=float, default=4e-4,
                         help='learning rate')
+    parser.add_argument('--test_batch_size', type=int, default=1,
+                        help='batch size for validation')
     parser.add_argument('--weight_decay', type=float, default=0.05,
                         help='optimizer weight decay')
     parser.add_argument('--disable_fp16', action='store_false', dest='fp16',
@@ -283,23 +285,25 @@ def main():
 def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader, wandb_run=None):
     tot, hit1, hit5 = 0, 0, 0
     eval_st = datetime.now()
-    for data, labels in loader:
+    for batch_idx, (data, labels) in enumerate(loader):
         data, labels = data.cuda(), labels.cuda()
-        assert data.size(0) == 1
-        if data.ndim == 6:
-            data = data[0] # now the first dimension is number of views
+        batch_size, num_views = data.shape[:2]
+        data = data.view(batch_size * num_views, *data.shape[2:])
+        labels = labels.unsqueeze(-1)
 
         with torch.no_grad():
             logits = model(data)
-            scores = logits.softmax(dim=-1).mean(dim=0)
+            scores = logits.softmax(dim=-1)
+            scores = scores.view(batch_size, num_views, -1)
+            scores = scores.mean(dim=1)
 
-        tot += 1
+        tot += batch_size
         hit1 += (scores.topk(1)[1] == labels).sum().item()
         hit5 += (scores.topk(5)[1] == labels).sum().item()
 
         if tot % 20 == 0:
             print(f'[Evaluation] num_samples: {tot}  '
-                  f'ETA: {(datetime.now() - eval_st) / tot * (len(loader) - tot)}  '
+                  f'ETA: {(datetime.now() - eval_st) / batch_idx * (len(loader) - batch_idx)}  '
                   f'cumulative_acc1: {hit1 / tot * 100.:.2f}%  '
                   f'cumulative_acc5: {hit5 / tot * 100.:.2f}%')
 

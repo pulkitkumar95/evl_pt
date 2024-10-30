@@ -50,6 +50,7 @@ class VideoDataset(torch.utils.data.Dataset):
             self.data_list = f.read().splitlines()
         self.cfg = cfg
         self.vid_base_dir = cfg.vid_base_dir
+        self.total_views = num_spatial_views * num_temporal_views
         
 
 
@@ -136,8 +137,8 @@ class VideoDataset(torch.utils.data.Dataset):
 
             frames = self._generate_spatial_crops(frames)
             # frames = sum([self._generate_temporal_crops(x) for x in frames], [])
-            if len(frames) > 1:
-                frames = torch.stack(frames)
+
+            frames = torch.stack(frames)
             if num_crops > 1:
                 frames = rearrange(frames, '(n t) h w c -> n t h w c', n=num_crops)
 
