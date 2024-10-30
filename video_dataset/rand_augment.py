@@ -386,12 +386,12 @@ class AugmentOp:
         else:
             return self.aug_fn(img_list, *level_args, **self.kwargs)
 
-
+# Commenting out transforms that do affine transformations
 _RAND_TRANSFORMS = [
     "AutoContrast",
     "Equalize",
     "Invert",
-    "Rotate",
+    # "Rotate",
     "Posterize",
     "Solarize",
     "SolarizeAdd",
@@ -399,10 +399,10 @@ _RAND_TRANSFORMS = [
     "Contrast",
     "Brightness",
     "Sharpness",
-    "ShearX",
-    "ShearY",
-    "TranslateXRel",
-    "TranslateYRel",
+    # "ShearX",
+    # "ShearY",
+    # "TranslateXRel",
+    # "TranslateYRel",
 ]
 
 
@@ -410,7 +410,7 @@ _RAND_INCREASING_TRANSFORMS = [
     "AutoContrast",
     "Equalize",
     "Invert",
-    "Rotate",
+    # "Rotate",
     "PosterizeIncreasing",
     "SolarizeIncreasing",
     "SolarizeAdd",
@@ -418,10 +418,10 @@ _RAND_INCREASING_TRANSFORMS = [
     "ContrastIncreasing",
     "BrightnessIncreasing",
     "SharpnessIncreasing",
-    "ShearX",
-    "ShearY",
-    "TranslateXRel",
-    "TranslateYRel",
+    # "ShearX",
+    # "ShearY",
+    # "TranslateXRel",
+    # "TranslateYRel",
 ]
 
 
