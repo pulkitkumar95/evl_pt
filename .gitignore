@@ -6,3 +6,5 @@ runs/
 
 video_dataset/io_internal.py
 wandb/
+checkpoints/ViT-B-16.pt
+make_ds_txt.py
