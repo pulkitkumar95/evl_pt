@@ -311,7 +311,7 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'torchrun --nproc_per_node={args.gpu} --master_port={master_port} '
         cmd += f'main.py --exp_name {args.exp_name} '
         cmd += '--num_steps 50000 '
-        cmd += '--backbone "ViT-B/16-lnpre" '
+        cmd += '--backbone ViT-B/16-lnpre '
         cmd += '--backbone_type clip '
         cmd += '--backbone_path checkpoints/ViT-B-16.pt '
         cmd += '--decoder_num_layers 4 '
