@@ -256,7 +256,7 @@ if 'zara' in hostname:
     image_path = '/scratch/zt1/project/abhinav2-prj/user/pulkit/orvit_pt/cotracker.sif'
     path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
     
-    pt_data_dir = data_paths['points_info']
+    
     
     if args.dataset == 'ssv2':
         rsync_command = f'~/msrsync/msrsync3 -p {args.cores} '
@@ -278,6 +278,7 @@ if 'zara' in hostname:
     # transfer_commands.append(split_info_transfer_command)
 
     if args.use_points:
+        pt_data_dir = data_paths['points_info']
         pt_transfer_command = f'{full_docker_command} {rsync_command} {pt_data_dir} {path_to_transfer}'
         transfer_commands.append(pt_transfer_command)
     destination_dir = path_to_transfer
