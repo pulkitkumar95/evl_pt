@@ -5,11 +5,18 @@ from typing import Optional
 import av
 import io
 import numpy as np
+try:
+    from decord import VideoReader
+    DECORD_AVAILABLE = True
+    print("DECORD_AVAILABLE")
+except ImportError:
+    DECORD_AVAILABLE = False
 
 import torch
 from torchvision import transforms
 
 from .transform import create_random_augment, random_resized_crop
+from einops import rearrange
 
 class VideoDataset(torch.utils.data.Dataset):
 
@@ -43,29 +50,43 @@ class VideoDataset(torch.utils.data.Dataset):
             self.data_list = f.read().splitlines()
         self.cfg = cfg
         self.vid_base_dir = cfg.vid_base_dir
+        
 
 
     def __len__(self):
         return len(self.data_list)
     
 
+
+
+    
+
     def __getitem__(self, idx):
         line = self.data_list[idx]
         path, label = line.split(' ')
+        split = path.split('/')[-2]
         path = os.path.join(self.data_root, path)
         label = int(label)
 
-        container = av.open(os.path.join(self.vid_base_dir, path))
-        frames = {}
-        for frame in container.decode(video=0):
-            frames[frame.pts] = frame
-        container.close()
-        frames = [frames[k] for k in sorted(frames.keys())]
+        path = os.path.join(self.vid_base_dir, path)
+        if DECORD_AVAILABLE:
+            frames = VideoReader(path, num_threads=1)
+        else:
+            frames = {}
+            container = av.open(path)
+            for frame in container.decode(video=0):
+                frames[frame.pts] = frame
+            container.close()
+            frames = [frames[k] for k in sorted(frames.keys())]
 
         if self.random_sample:
             frame_idx = self._random_sample_frame_idx(len(frames))
-            frames = [frames[x].to_rgb().to_ndarray() for x in frame_idx]
-            frames = torch.as_tensor(np.stack(frames)).float() / 255.
+            if DECORD_AVAILABLE:
+                frames = frames.get_batch(frame_idx).asnumpy()
+                frames = torch.as_tensor(frames / 255.).float()
+            else:
+                frames = [frames[x].to_rgb().to_ndarray() for x in frame_idx]
+                frames = torch.as_tensor(np.stack(frames)).float() / 255.
 
             if self.auto_augment is not None:
                 aug_transform = create_random_augment(
@@ -87,8 +108,16 @@ class VideoDataset(torch.utils.data.Dataset):
             )
             
         else:
-            frames = [x.to_rgb().to_ndarray() for x in frames]
+            frames = self._generate_temporal_crops_idx_with_crops(frames)
+            # frames = [x.to_rgb().to_ndarray() for x in frames]
             frames = torch.as_tensor(np.stack(frames))
+            num_crops, temporal_len, _, _, _ = frames.size()
+        
+            if num_crops > 1:
+                frames = rearrange(frames, 'n t h w -> (n t) h w c')
+            else:
+                frames = frames.squeeze(0)
+
             frames = frames.float() / 255.
 
             frames = (frames - self.mean) / self.std
@@ -106,9 +135,11 @@ class VideoDataset(torch.utils.data.Dataset):
             )
 
             frames = self._generate_spatial_crops(frames)
-            frames = sum([self._generate_temporal_crops(x) for x in frames], [])
+            # frames = sum([self._generate_temporal_crops(x) for x in frames], [])
             if len(frames) > 1:
                 frames = torch.stack(frames)
+            if num_crops > 1:
+                frames = rearrange(frames, '(n t) h w c -> n t h w c', n=num_crops)
 
         return frames, label
 
@@ -129,6 +160,32 @@ class VideoDataset(torch.utils.data.Dataset):
             crops.append(frames[:, st: st + self.num_frames * self.sampling_rate: self.sampling_rate])
         
         return crops
+
+
+    def _generate_temporal_crops_idx_with_crops(self, frames):
+        # assumption is that frames is a decord VideoReader object
+
+        seg_len = (self.num_frames - 1) * self.sampling_rate + 1
+        all_frame_indices = list(range(len(frames)))
+        if len(frames) < seg_len:
+            all_frame_indices = all_frame_indices + [all_frame_indices[-1]] * (seg_len - len(frames))
+            
+        slide_len = len(all_frame_indices) - seg_len
+
+        crop_indices = []
+        crops = []
+        for i in range(self.num_temporal_views):
+            if self.num_temporal_views == 1:
+                st = slide_len // 2
+            else:
+                st = round(slide_len / (self.num_temporal_views - 1) * i)
+
+            crop_indices.append(all_frame_indices[st: st + self.num_frames * self.sampling_rate: self.sampling_rate])
+        for crop_idx in crop_indices:
+            crops.append(frames.get_batch(crop_idx).asnumpy())
+
+        return crops
+        
 
 
     def _generate_spatial_crops(self, frames):
