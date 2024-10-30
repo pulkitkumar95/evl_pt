@@ -114,7 +114,8 @@ class VideoDataset(torch.utils.data.Dataset):
             num_crops, temporal_len, _, _, _ = frames.size()
         
             if num_crops > 1:
-                frames = rearrange(frames, 'n t h w -> (n t) h w c')
+                #frames = rearrange(frames, 'n t h w -> (n t) h w c')
+                frames = rearrange(frames, 'n t h w c -> (n t) h w c')
             else:
                 frames = frames.squeeze(0)
 

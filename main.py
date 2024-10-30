@@ -10,13 +10,14 @@ import torch.distributed as dist
 
 import video_dataset
 import checkpoint
-from model import EVLTransformer
+
 from video_dataset import dataloader
 from weight_loaders import weight_loader_fn_dict
 from vision_transformer import vit_presets
 
 OG_BATCH_SIZE = 256
 
+from select_models import select_model_func
 
 
 
@@ -59,7 +60,7 @@ def new_dist_init(args):
 
 def setup_wandb(args: argparse.Namespace):
     wandb_run = wandb.init(project='evl_pt',config=args.__dict__, 
-                                    entity="act_seg_pi_umd")
+                                    entity="act_seg_pi_umd",  name='{}_{}'.format(args.exp_name, args.model_type))
     wandb_run.define_metric("epoch")
     wandb_run.define_metric("iteration")
 
@@ -151,6 +152,13 @@ def main():
                              'at a time to avoid out-of-memory error.')
     parser.add_argument('--vid_base_dir', type=str, default='/fs/vulcan-datasets/Kinetics-400/',
                         help='base directory for video files')
+    
+
+    parser.add_argument('--model_type', type=str, default='evl', help='main model type')
+
+    parser.add_argument('--exp_name', type=str, default='exp_debug', help='exp name')
+
+    
     args = parser.parse_args()
 
     args = new_dist_init(args)
@@ -174,23 +182,8 @@ def main():
         wandb_run = None
     
 
-    model = EVLTransformer(
-        backbone_name=args.backbone,
-        backbone_type=args.backbone_type,
-        backbone_path=args.backbone_path,
-        backbone_mode='finetune' if args.finetune_backbone else ('freeze_fp16' if args.fp16 else 'freeze_fp32'),
-        decoder_num_layers=args.decoder_num_layers,
-        decoder_qkv_dim=args.decoder_qkv_dim,
-        decoder_num_heads=args.decoder_num_heads,
-        decoder_mlp_factor=args.decoder_mlp_factor,
-        num_classes=args.num_classes,
-        enable_temporal_conv=args.temporal_conv,
-        enable_temporal_pos_embed=args.temporal_pos_embed,
-        enable_temporal_cross_attention=args.temporal_cross_attention,
-        cls_dropout=args.cls_dropout,
-        decoder_mlp_dropout=args.decoder_mlp_dropout,
-        num_frames=args.num_frames,
-    )
+    model = select_model_func(args)
+
     model.cuda(cuda_device_id)
 
     model = torch.nn.parallel.DistributedDataParallel(
