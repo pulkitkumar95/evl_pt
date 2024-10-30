@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-
+import os
 import argparse
+import datetime as dt
 from datetime import datetime
 import builtins
-
+import wandb
 import torch
 import torch.distributed as dist
 
@@ -13,6 +14,66 @@ from model import EVLTransformer
 from video_dataset import dataloader
 from weight_loaders import weight_loader_fn_dict
 from vision_transformer import vit_presets
+
+OG_BATCH_SIZE = 256
+
+
+
+
+def new_dist_init(args):
+    if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
+        args.rank = int(os.environ["RANK"])
+        args.world_size = int(os.environ["WORLD_SIZE"])
+        args.gpu = int(os.environ["LOCAL_RANK"])
+    elif "SLURM_PROCID" in os.environ:
+        args.rank = int(os.environ["SLURM_PROCID"])
+        args.gpu = args.rank % torch.cuda.device_count()
+    else:
+        print("Not using distributed mode")
+        args.distributed = False
+        return
+
+    args.distributed = True
+    args.init_method = 'env://'
+
+    torch.cuda.set_device(args.gpu)
+    args.dist_backend = "nccl"
+    print(
+        "| distributed init (rank {}, world {}): {}".format(
+            args.rank, args.world_size, args.init_method
+        ),
+        flush=True,
+    )
+    torch.distributed.init_process_group(
+        backend=args.dist_backend,
+        init_method=args.init_method,
+        world_size=args.world_size,
+        rank=args.rank,
+        timeout=dt.timedelta(
+            days=365
+        ),  # allow auto-downloading and de-compressing
+    )
+    print('Done init')
+    torch.distributed.barrier()
+    return args
+
+def setup_wandb(args: argparse.Namespace):
+    wandb_run = wandb.init(project='evl_pt',config=args.__dict__, 
+                                    entity="act_seg_pi_umd")
+    wandb_run.define_metric("epoch")
+    wandb_run.define_metric("iteration")
+
+    wandb_run.define_metric("iter*", step_metric="iteration")
+
+    wandb_run.define_metric("train*", step_metric="epoch")
+    wandb_run.define_metric("lr", step_metric="epoch")
+
+    wandb_run.define_metric("val*", step_metric="epoch")
+    wandb_run.define_metric("train_loss", summary="min")
+    wandb_run.define_metric("val_loss", summary="min")
+    wandb_run.define_metric("val_top5_acc", summary="max")
+    wandb_run.define_metric("val_top1_acc", summary="max")
+    return wandb_run
 
 def setup_print(is_master: bool):
     """
@@ -92,10 +153,26 @@ def main():
                         help='base directory for video files')
     args = parser.parse_args()
 
-    dist.init_process_group('nccl')
+    args = new_dist_init(args)
     setup_print(dist.get_rank() == 0)
-    cuda_device_id = dist.get_rank() % torch.cuda.device_count()
+    
+    # adusting lr and iterations basded on batch size, this is to keep the total training time the same
+    batch_size_ratio = args.batch_size / OG_BATCH_SIZE
+    args.lr *= batch_size_ratio**0.5
+    args.num_steps = int(args.num_steps / batch_size_ratio)
+    args.eval_freq = int(args.eval_freq / batch_size_ratio)
+    args.save_freq = int(args.save_freq / batch_size_ratio)
+
+
+
+    cuda_device_id = args.gpu
+    print(f"Using GPU {cuda_device_id}")
     torch.cuda.set_device(cuda_device_id)
+    if args.gpu == 0:
+        wandb_run = setup_wandb(args)
+    else:
+        wandb_run = None
+    
 
     model = EVLTransformer(
         backbone_name=args.backbone,
@@ -114,8 +191,8 @@ def main():
         decoder_mlp_dropout=args.decoder_mlp_dropout,
         num_frames=args.num_frames,
     )
-    print(model)
-    model.cuda()
+    model.cuda(cuda_device_id)
+
     model = torch.nn.parallel.DistributedDataParallel(
         model, device_ids=[cuda_device_id], output_device=cuda_device_id,
     )
@@ -174,6 +251,12 @@ def main():
             dist.all_reduce(sync_tensor)
             sync_tensor = sync_tensor.cpu() / dist.get_world_size()
             loss_value, acc1, acc5 = sync_tensor.tolist()
+            if wandb_run is not None:
+                wandb_run.log({
+                    "train_loss": loss_value,
+                    "train_acc1": acc1,
+                    "train_acc5": acc5,
+                })
 
             print(
                 f'batch_time: {(batch_ed - batch_st).total_seconds():.3f}  '
@@ -184,20 +267,20 @@ def main():
                     f'  acc1: {acc1 * 100:.2f}%  acc5: {acc5 * 100:.2f}%' if labels.dtype == torch.long else ''
                 )
             )
-        
+        if (i + 1) % args.save_freq == 0:
+            checkpoint.save_checkpoint(model, optimizer, lr_sched, loss_scaler, i + 1, args)    
         if (i + 1) % args.eval_freq == 0:
             print('Start model evaluation at step', i + 1)
             model.eval()
-            evaluate(model, val_loader)
+            evaluate(model, val_loader, wandb_run)
             model.train()
 
-        if (i + 1) % args.save_freq == 0:
-            checkpoint.save_checkpoint(model, optimizer, lr_sched, loss_scaler, i + 1, args)
+        
         
         batch_st = datetime.now()
 
 
-def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
+def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader, wandb_run=None):
     tot, hit1, hit5 = 0, 0, 0
     eval_st = datetime.now()
     for data, labels in loader:
@@ -223,6 +306,11 @@ def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
     sync_tensor = torch.LongTensor([tot, hit1, hit5]).cuda()
     dist.all_reduce(sync_tensor)
     tot, hit1, hit5 = sync_tensor.cpu().tolist()
+    if wandb_run is not None:
+        wandb_run.log({
+            "val_top1_acc": hit1 / tot,
+            "val_top5_acc": hit5 / tot,
+        })
 
     print(f'Accuracy on validation set: top1={hit1 / tot * 100:.2f}%, top5={hit5 / tot * 100:.2f}%')
 
