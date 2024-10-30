@@ -148,7 +148,7 @@ parser.add_argument('--point_grid_size', type=int, default=16,  help='Point grid
 args = parser.parse_args()
 
 if 'nexus' in socket.gethostname():
-    gpu_types = ['a6000','a5000']
+    gpu_types = ['a6000','a5000', 'a4000']
 else:
     gpu_types = ['h100', 'a100']
 remove_nodes = ['cml17', 'cml20', 'cml28', 'clip', 'gamma']
@@ -335,6 +335,7 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'--vid_base_dir {destination_dir} '
         cmd += f'--test_batch_size {args.test_batch_size} '
         cmd += f'--wandb_id {wandb_id} '
+        cmd += f'--dataset {args.dataset} '
             
        
         nowfile.write(f'{cmd}\n')

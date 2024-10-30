@@ -159,6 +159,9 @@ def main():
                         help='wandb id for logging')
     parser.add_argument('--exp_name', type=str, default=None,
                         help='experiment name for logging')
+    
+    parser.add_argument('--dataset', type=str, required=True,
+                        help='dataset name')
     args = parser.parse_args()
 
     args = new_dist_init(args)
