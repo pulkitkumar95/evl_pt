@@ -1,0 +1,82 @@
+ssv2:
+  nexus:
+    videos: /fs/vulcan-datasets/SomethingV2/20bn-something-something-v2
+    # points_info: /fs/cfar-projects/actionloc/bounce_back/co-trakcer_mod/feats_sans_tskip_sans_feat/somethingv2/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/somethingv2/
+    ssv2_splits: '/fs/cfar-projects/actionloc/bounce_back/dataset_csvs'
+    destination: '/scratch0/pulkit/ssv2'
+
+  zaratan:
+    videos: /scratch/zt1/project/abhinav2-prj/user/pulkit/somethingv2/20bn-something-something-v2
+    # points_info: /fs/cfar-projects/actionloc/bounce_back/co-trakcer_mod/feats_sans_tskip_sans_feat/somethingv2/
+    points_info: /scratch/zt1/project/abhinav2-prj/user/pulkit/somethingv2/
+    split_info: '/scratch/zt1/project/abhinav2-prj/user/pulkit/dataset_csvs'
+    destination: '/tmp/pulkit/ssv2'
+ucf:
+  nexus:
+    videos: /fs/vulcan-datasets/UCF101/videos
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/ucf101
+    splits: /fs/cfar-projects/actionloc/bounce_back/point_tracking/few_shot_main_data_csvs
+    destination: '/scratch0/pulkit/ucf101'
+
+hmdb:
+  nexus:
+    videos: /fs/vulcan-datasets/HMDB51/stabilized_videos
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/hmdb51
+    splits: /fs/cfar-projects/actionloc/bounce_back/point_tracking/few_shot_main_data_csvs
+    destination: '/scratch1/pulkit/hmdb51'
+
+
+epickitchens:
+  nexus:
+    videos: /fs/vulcan-datasets/EPIC-Kitchens-2020/
+    # points_info: /fs/cfar-projects/actionloc/bounce_back/co-trakcer_mod/feats_sans_tskip_sans_feat/epic_kitchens/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/ek100/
+    destination: '/scratch0/pulkit/ek100/'
+
+k400:
+  nexus:
+    videos: /fs/vulcan-datasets/Kinetics-400/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/kinetics
+    destination: '/fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/kinetics'
+    split_info: '/fs/cfar-projects/actionloc/bounce_back/dataset_csvs'
+  zaratan:
+    train_videos: /opt/data/kinetics/train_256_new
+    val_videos: /opt/data/kinetics/val_256_new
+    points_info: /opt/data/point_tracking/feat_dumps/kinetics
+    destination: /tmp/pulkit/kinetics
+    split_info: '/scratch/zt1/project/abhinav2-prj/user/pulkit/dataset_csvs'
+    
+k100:
+  nexus:
+    videos: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/videos
+    # points_info: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/kinetics_molo_256/
+    splits: '/fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/data_csvs/'
+    destination: '/scratch1/pulkit/k100_fewshot_256'
+
+
+finegym:
+  nexus:
+    # videos: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/videos
+    # points_info: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/finegym/
+    splits: '/fs/cfar-projects/actionloc/bounce_back/point_tracking/dataset_csvs/data_to_transfer/'
+    destination: '/scratch1/pulkit/finegym'
+
+haa500:
+  nexus:
+    # videos: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/videos
+    # points_info: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/haa500/
+    splits: '/fs/cfar-projects/actionloc/bounce_back/point_tracking/dataset_csvs/data_to_transfer/'
+    destination: '/scratch1/pulkit/haa500'
+
+
+diving48:
+  nexus:
+    # videos: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/videos
+    # points_info: /fs/nexus-scratch/pulkit/feats_sans_tskip_sans_feat/kinetics_molo_256/
+    points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/diving48/
+    splits: '/fs/cfar-projects/actionloc/bounce_back/point_tracking/dataset_csvs/data_to_transfer/'
+    destination: '/scratch1/pulkit/diving48'
