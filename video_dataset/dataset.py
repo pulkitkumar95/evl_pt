@@ -50,6 +50,10 @@ class VideoDataset(torch.utils.data.Dataset):
             self.data_list = f.read().splitlines()
         self.cfg = cfg
         self.vid_base_dir = cfg.vid_base_dir
+        if cfg.dataset == 'ssv2':
+            self.vid_base_dir = os.path.join(self.vid_base_dir, 
+                                             '20bn-something-something-v2')
+
         self.total_views = num_spatial_views * num_temporal_views
         
 
@@ -65,7 +69,6 @@ class VideoDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         line = self.data_list[idx]
         path, label = line.split(' ')
-        split = path.split('/')[-2]
         path = os.path.join(self.data_root, path)
         label = int(label)
 
