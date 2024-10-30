@@ -5,8 +5,8 @@ hostname=$(hostname)
 if [[ $hostname == *"arm"* ]]; then
     vid_path=/scratch1/pulkit/kinetics/
     num_nodes=1
-    batch_size=10
-    num_workers=0
+    batch_size=64
+    num_workers=64
 else
     vid_path=/fs/vulcan-datasets/Kinetics-400
     num_nodes=1
@@ -40,5 +40,5 @@ torchrun --nproc_per_node=${num_nodes} --master_port=19599  \
     --num_frames 16 \
     --sampling_rate 16 \
     --num_spatial_views 3 \
-    --num_temporal_views 3 \
-    --vid_base_dir "${vid_path}" --eval_only
+    --num_temporal_views 1 \
+    --vid_base_dir "${vid_path}" --test_batch_size 32 
