@@ -58,6 +58,8 @@ def new_dist_init(args):
     return args
 
 def setup_wandb(args: argparse.Namespace):
+    os.environ["WANDB_RESUME"] = "allow"
+    os.environ["WANDB_RUN_ID"] = args.wandb_id if args.wandb_id is not None else wandb.util.generate_id()
     wandb_run = wandb.init(project='evl_pt',config=args.__dict__, 
                                     entity="act_seg_pi_umd")
     wandb_run.define_metric("epoch")
@@ -153,6 +155,10 @@ def main():
                              'at a time to avoid out-of-memory error.')
     parser.add_argument('--vid_base_dir', type=str, default='/fs/vulcan-datasets/Kinetics-400/',
                         help='base directory for video files')
+    parser.add_argument('--wandb_id', type=str, default=None,
+                        help='wandb id for logging')
+    parser.add_argument('--exp_name', type=str, default=None,
+                        help='experiment name for logging')
     args = parser.parse_args()
 
     args = new_dist_init(args)
