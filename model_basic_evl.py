@@ -49,6 +49,8 @@ class EVLDecoderBasic(nn.Module):
 
     #def forward(self, in_features: List[Dict[str, torch.Tensor]]):
     def forward(self, frame_features: torch.Tensor):
+        frame_features = frame_features[:,:,1:,:] # we don't use cls token here
+
         N, T, L, C = frame_features.size()
 
         x = self.cls_token.view(1, 1, -1).repeat(N, 1, 1)
