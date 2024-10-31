@@ -162,6 +162,14 @@ def main():
     
     parser.add_argument('--dataset', type=str, required=True,
                         help='dataset name')
+    parser.add_argument('--use_points', action='store_true',
+                        help='use points for training')
+    parser.add_argument('--pt_data_dir', type=str, default=None,
+                        help='path to point data directory')
+    parser.add_argument('--point_info_name', type=str, default=None,
+                        help='name of point info file')
+    parser.add_argument('--num_points_to_sample', type=int, default=196,  help='Number of points to sample')
+    parser.add_argument('--num_patches', type=int, default=196,  help='Number of patches to sample')
     args = parser.parse_args()
 
     args = new_dist_init(args)
@@ -227,8 +235,12 @@ def main():
 
     assert len(train_loader) == args.num_steps - resume_step
     batch_st, train_st = datetime.now(), datetime.now()
-    for i, (data, labels) in enumerate(train_loader, resume_step):
+    for i, (data, labels, pt_dict) in enumerate(train_loader, resume_step):
         data, labels = data.cuda(), labels.cuda()
+        if pt_dict:
+            pt_coords = pt_dict['pred_tracks'].cuda() # batch_size, num_points, T, 2
+            pt_grid_indices = pt_dict['pred_grid_indices'].cuda() # batch_size, num_points, T
+            pt_visibility = pt_dict['pred_visibility'].cuda() # batch_size, num_points, T
         data_ed = datetime.now()
 
         optimizer.zero_grad()
@@ -294,10 +306,18 @@ def main():
 def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader, wandb_run=None):
     tot, hit1, hit5 = 0, 0, 0
     eval_st = datetime.now()
-    for batch_idx, (data, labels) in enumerate(loader):
+    for batch_idx, (data, labels, pt_dict) in enumerate(loader):
         data, labels = data.cuda(), labels.cuda()
         batch_size, num_views = data.shape[:2]
         data = data.view(batch_size * num_views, *data.shape[2:])
+        if pt_dict:
+            pt_coords = pt_dict['pred_tracks'].cuda()
+            pt_coords = pt_coords.view(batch_size * num_views, *pt_coords.shape[2:])
+            pt_grid_indices = pt_dict['pred_grid_indices'].cuda()
+            pt_grid_indices = pt_grid_indices.view(batch_size * num_views, *pt_grid_indices.shape[2:])
+            pt_visibility = pt_dict['pred_visibility'].cuda()
+            pt_visibility = pt_visibility.view(batch_size * num_views, *pt_visibility.shape[2:])
+            
         labels = labels.unsqueeze(-1)
 
         with torch.no_grad():
