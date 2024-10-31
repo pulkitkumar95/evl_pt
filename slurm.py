@@ -136,6 +136,7 @@ parser.add_argument('--point_grid_size', type=int, default=16,  help='Point grid
 
 
 
+
 # parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
 
 
@@ -280,6 +281,7 @@ if 'zara' in hostname:
     if args.use_points:
         pt_data_dir = data_paths['points_info']
         pt_transfer_command = f'{full_docker_command} {rsync_command} {pt_data_dir} {path_to_transfer}'
+        pt_data_dir = os.path.join(path_to_transfer, point_info_name)
         transfer_commands.append(pt_transfer_command)
     destination_dir = path_to_transfer
 
@@ -288,6 +290,9 @@ else:
         transfer_commands, len_check_commands = get_transfer_commands(data_paths, 
                                                     destination_dir, dataset,
                                                     touch_file_path)
+        if args.use_points:
+            pt_data_dir = os.path.join(destination_dir, point_info_name)
+        breakpoint()
     else:
         destination_dir = data_paths['videos']
 # breakpoint()
@@ -331,12 +336,15 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'--num_workers {args.cores} '
         cmd += f'--num_frames {args.num_frames} '
         cmd += '--sampling_rate 16 '
-        cmd += '--num_spatial_views 3 '
+        cmd += '--num_spatial_views 1 '
         cmd += '--num_temporal_views 1 '
         cmd += f'--vid_base_dir {destination_dir} '
         cmd += f'--test_batch_size {args.test_batch_size} '
         cmd += f'--wandb_id {wandb_id} '
         cmd += f'--dataset {args.dataset} '
+        if args.use_points:
+            cmd += f'--pt_data_dir {pt_data_dir} --point_info_name {point_info_name} '
+            cmd += '--use_points '
             
        
         nowfile.write(f'{cmd}\n')
