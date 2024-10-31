@@ -9,3 +9,4 @@ wandb/
 checkpoints/ViT-B-16.pt
 make_ds_txt.py
 out*
+checkpoints

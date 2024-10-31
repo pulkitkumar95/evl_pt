@@ -18,6 +18,7 @@ from vision_transformer import vit_presets
 OG_BATCH_SIZE = 256
 
 
+from select_models import select_model_func
 
 
 def new_dist_init(args):
@@ -61,7 +62,7 @@ def setup_wandb(args: argparse.Namespace):
     os.environ["WANDB_RESUME"] = "allow"
     os.environ["WANDB_RUN_ID"] = args.wandb_id if args.wandb_id is not None else wandb.util.generate_id()
     wandb_run = wandb.init(project='evl_pt',config=args.__dict__, 
-                                    entity="act_seg_pi_umd")
+                                    entity="act_seg_pi_umd", name='{}_{}'.format(args.exp_name, args.model_type))
     wandb_run.define_metric("epoch")
     wandb_run.define_metric("iteration")
 
@@ -162,6 +163,9 @@ def main():
     
     parser.add_argument('--dataset', type=str, required=True,
                         help='dataset name')
+
+    parser.add_argument('--model_type', type=str, default='evl', help='main model type')
+
     args = parser.parse_args()
 
     args = new_dist_init(args)
@@ -185,23 +189,8 @@ def main():
         wandb_run = None
     
 
-    model = EVLTransformer(
-        backbone_name=args.backbone,
-        backbone_type=args.backbone_type,
-        backbone_path=args.backbone_path,
-        backbone_mode='finetune' if args.finetune_backbone else ('freeze_fp16' if args.fp16 else 'freeze_fp32'),
-        decoder_num_layers=args.decoder_num_layers,
-        decoder_qkv_dim=args.decoder_qkv_dim,
-        decoder_num_heads=args.decoder_num_heads,
-        decoder_mlp_factor=args.decoder_mlp_factor,
-        num_classes=args.num_classes,
-        enable_temporal_conv=args.temporal_conv,
-        enable_temporal_pos_embed=args.temporal_pos_embed,
-        enable_temporal_cross_attention=args.temporal_cross_attention,
-        cls_dropout=args.cls_dropout,
-        decoder_mlp_dropout=args.decoder_mlp_dropout,
-        num_frames=args.num_frames,
-    )
+    model = select_model_func(args)
+
     model.cuda(cuda_device_id)
 
     model = torch.nn.parallel.DistributedDataParallel(

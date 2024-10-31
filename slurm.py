@@ -12,6 +12,8 @@ import wandb
 import os
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
+import getpass
+
 def get_gpu_info(gpu_type=['a6000', 'a5000'], remove_nodes=None, qos='vulc_scav'):
     if qos == 'scav':
         remove_nodes.append('vulcan')
@@ -128,7 +130,7 @@ parser.add_argument('--use_docker', action='store_true')
 parser.add_argument('--seed', type=int, default=42,  help='Random seed')
 parser.add_argument('--point_grid_size', type=int, default=16,  help='Point grid size')
 
-
+parser.add_argument('--model_type', type=str, default='evlbasic',  help='model type')
 
 
 
@@ -252,10 +254,14 @@ if 'zara' in hostname:
     transfer_commands = []
     use_docker = True
     docker_command = 'singularity'
-    bind_paths = '/scratch/zt1/project/abhinav2-prj/user/pulkit'
+    #bind_paths = '/scratch/zt1/project/abhinav2-prj/user/pulkit'
+    username = getpass.getuser()
+    bind_paths = '/scratch/zt1/project/abhinav2-prj/user/{}'.format(username)
+
     image_path = '/scratch/zt1/project/abhinav2-prj/user/pulkit/orvit_pt/cotracker.sif'
-    path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
-    
+    #path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
+
+    path_to_transfer = os.path.join('/tmp/{}/'.format(username), args.dataset)
     
     
     if args.dataset == 'ssv2':
@@ -337,6 +343,7 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'--test_batch_size {args.test_batch_size} '
         cmd += f'--wandb_id {wandb_id} '
         cmd += f'--dataset {args.dataset} '
+        cmd += f'--model_type {args.model_type} '
             
        
         nowfile.write(f'{cmd}\n')
@@ -446,7 +453,11 @@ with open(slurm_script_path, 'w') as slurmfile:
         slurmfile.write("export SCRATCH_DIR=tmp\n")
         slurmfile.write("export WANDB_MODE=offline\n")
 
-        hub_home = '/scratch/zt1/project/abhinav2-prj/user/pulkit/'
+        #hub_home = '/scratch/zt1/project/abhinav2-prj/user/pulkit/'
+
+        username = getpass.getuser()
+        hub_home = '/scratch/zt1/project/abhinav2-prj/user/{}/'.format(username)
+
 
     slurmfile.write(f'export TORCH_HOME={hub_home}\n')
     slurmfile.write(f'export HF_HOME={hub_home}/huggingface\n')

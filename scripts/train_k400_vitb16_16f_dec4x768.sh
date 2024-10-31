@@ -41,4 +41,6 @@ torchrun --nproc_per_node=${num_nodes} --master_port=19599  \
     --sampling_rate 16 \
     --num_spatial_views 3 \
     --num_temporal_views 1 \
-    --vid_base_dir "${vid_path}" --test_batch_size 32 
+    --vid_base_dir "${vid_path}" --test_batch_size 32 \
+    --model_type 'evlbasic' \
+    --dataset k400
