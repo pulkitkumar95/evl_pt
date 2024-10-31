@@ -273,11 +273,11 @@ if 'zara' in hostname:
     if args.dataset == 'k400':
         for split in ['train', 'val']:
             vid_data_dir = data_paths[f'{split}_videos']
-            vid_transfer_command = f'{full_docker_command} {rsync_command} {vid_data_dir} {path_to_transfer}'
+            vid_transfer_command = f'{full_docker_command} ln -s {vid_data_dir} {path_to_transfer}'
             transfer_commands.append(vid_transfer_command)
     else:
         vid_data_dir = data_paths['videos']
-        vid_transfer_command = f'{full_docker_command} {rsync_command} {vid_data_dir} {path_to_transfer}'
+        vid_transfer_command = f'{full_docker_command} ln -s {vid_data_dir} {path_to_transfer}'
         transfer_commands.append(vid_transfer_command)
     
     # split_info_transfer_command = f'{full_docker_command} rsync -a {split_info_dir} {path_to_transfer}'
