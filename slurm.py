@@ -415,7 +415,10 @@ with open(slurm_script_path, 'w') as slurmfile:
         if not args.gpu is None:
             # if hostname in {'nexus', 'vulcan'}:
             if 'nexus' in hostname:
-                slurmfile.write(f'#SBATCH --gres=gpu:{args.gpu}\n')
+                #slurmfile.write(f'#SBATCH --gres=gpu:{args.gpu}\n')
+
+                #TODO debug
+                slurmfile.write(f'#SBATCH --gres=gpu:rtxa5000:{args.gpu}\n')
             else:
 
                 if args.gpu_to_use == 'a100':
@@ -425,12 +428,22 @@ with open(slurm_script_path, 'w') as slurmfile:
                     
         else:
             raise ValueError("Specify the gpus for scavenger")
-    elif args.qos == 'high':
-        slurmfile.write("#SBATCH  --qos vulcan-high\n")
-        slurmfile.write("#SBATCH --partition vulcan-ampere\n")
-        slurmfile.write("#SBATCH --account=vulcan-abhinav\n")
+    elif args.qos == 'medium':
+        # slurmfile.write("#SBATCH  --qos vulcan-high\n")
+        # slurmfile.write("#SBATCH --partition vulcan-ampere\n")
+        # slurmfile.write("#SBATCH --account=vulcan-abhinav\n")
+
+
+        slurmfile.write("#SBATCH  --qos medium\n")
+        slurmfile.write("#SBATCH --partition tron\n")
+
+        slurmfile.write("#SBATCH --account=nexus\n")
+    
         slurmfile.write("#SBATCH --time=%d:00:00\n" % args.nhrs)
-        slurmfile.write("#SBATCH --gres=gpu:%d\n" % args.gpu)
+        # slurmfile.write("#SBATCH --gres=gpu:%d\n" % args.gpu)
+
+        #TODO debug
+        slurmfile.write("#SBATCH --gres=gpu:rtxa6000:%d\n" % args.gpu)
         slurmfile.write("#SBATCH --cpus-per-task=%d\n" % args.cores)
         slurmfile.write("#SBATCH --mem=%dG\n" % args.mem)
     if 'nexus' in hostname:
