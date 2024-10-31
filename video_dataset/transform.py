@@ -568,12 +568,15 @@ def random_resized_crop(
 
     i, j, h, w = _get_param_spatial_crop(scale, ratio, height, width)
     cropped = images[:, :, i : i + h, j : j + w]
+    cropped_factor = [j, j + w, i, i + h] # xmin, xmax, ymin, ymax
+    resize_factor = [target_width/w, target_height/h]
+    resized_factor = torch.Tensor(resize_factor).view(1, 1, 2)
     return torch.nn.functional.interpolate(
         cropped,
         size=(target_height, target_width),
         mode="bilinear",
-        align_corners=False,
-    )
+        align_corners=False,    
+    ), cropped_factor, resized_factor
 
 
 def random_resized_crop_with_shift(
