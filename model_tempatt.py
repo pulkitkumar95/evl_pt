@@ -125,28 +125,11 @@ class TransformerEncoderLayerTempAtt(nn.Module):
 
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor):
-        if self.return_all_features:
-            ret_dict = {}
-            
-            x_norm = self.norm1(x)
-            attn_out = self.attn(x_norm, x_norm, x_norm)
-            ret_dict['q'] = attn_out['q']
-            ret_dict['k'] = attn_out['k']
-            ret_dict['v'] = attn_out['v']
-            ret_dict['attn_out'] = attn_out['out']
-            x = x + attn_out['out']
+        x_norm = self.norm1(x)
+        x = x + self.attn(x_norm, x_norm, x_norm, mask)
+        x = x + self.mlp(self.norm2(x))
 
-            x = x + self.mlp(self.norm2(x))
-            ret_dict['out'] = x
-
-            return ret_dict
-        
-        else:
-            x_norm = self.norm1(x)
-            x = x + self.attn(x_norm, x_norm, x_norm, mask)
-            x = x + self.mlp(self.norm2(x))
-
-            return x
+        return x
 
 
 class EVLDecoderTempAtt(nn.Module):

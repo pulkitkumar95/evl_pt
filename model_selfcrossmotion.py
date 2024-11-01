@@ -224,6 +224,12 @@ class EVLDecoderSelfCrossmotion(nn.Module):
     ):
         super().__init__()
 
+        self.blocks = nn.ModuleList([
+            TransformerEncoderLayer(
+                in_feature_dim=in_feature_dim, qkv_dim=in_feature_dim, num_heads=num_heads, mlp_factor=mlp_factor,
+                return_all_features=False,
+            ) for _ in range(1)
+        ])
 
         self.decoder_layers = nn.ModuleList(
             [TransformerDecoderLayer(in_feature_dim, qkv_dim, num_heads, mlp_factor, mlp_dropout) for _ in range(2)]
@@ -255,6 +261,7 @@ class EVLDecoderSelfCrossmotion(nn.Module):
         frame_features = frame_features.flatten(1, 2) # B, T * N, C
         
         # a transformer block
+        frame_features = self.blocks[0](frame_features)
         x = self.decoder_layers[0](x, frame_features)
 
         # motion features
