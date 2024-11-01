@@ -43,4 +43,6 @@ torchrun --nproc_per_node=${num_nodes} --master_port=19599  \
     --num_temporal_views 1 \
     --vid_base_dir "${vid_path}" --test_batch_size 32 \
     --model_type 'evlbasic' \
-    --dataset k400 --model_type 'evlselfcrossmotion' --use_points
+    --dataset k400 --model_type 'evlselfcrossmotion' \
+    --pt_data_dir /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/kinetics/cotracker2_14_uniform_8_corrected \
+    --point_info_name cotracker2_14_uniform_8_corrected --use_points 

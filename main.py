@@ -227,9 +227,9 @@ def main():
     for i, (data, labels, pt_dict) in enumerate(train_loader, resume_step):
         data, labels = data.cuda(), labels.cuda()
         if pt_dict:
-            pt_coords = pt_dict['pred_tracks'].cuda() # batch_size, num_points, T, 2
+            pt_coords = pt_dict['pred_tracks'].half() # batch_size, num_points, T, 2
             pt_grid_indices = pt_dict['pred_grid_indices'].cuda() # batch_size, num_points, T
-            pt_visibility = pt_dict['pred_visibility'].cuda() # batch_size, num_points, T
+            pt_visibility = pt_dict['pred_visibility'].half() # batch_size, num_points, T
         data_ed = datetime.now()
 
         optimizer.zero_grad()
