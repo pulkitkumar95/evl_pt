@@ -8,7 +8,7 @@ import socket
 import subprocess
 import yaml
 import wandb
-
+import getpass
 import os
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
