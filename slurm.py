@@ -12,8 +12,6 @@ import wandb
 import os
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
-import getpass
-
 def get_gpu_info(gpu_type=['a6000', 'a5000'], remove_nodes=None, qos='vulc_scav'):
     if qos == 'scav':
         remove_nodes.append('vulcan')
@@ -130,7 +128,8 @@ parser.add_argument('--use_docker', action='store_true')
 parser.add_argument('--seed', type=int, default=42,  help='Random seed')
 parser.add_argument('--point_grid_size', type=int, default=16,  help='Point grid size')
 
-parser.add_argument('--model_type', type=str, default='evlbasic',  help='model type')
+
+
 
 
 
@@ -254,14 +253,10 @@ if 'zara' in hostname:
     transfer_commands = []
     use_docker = True
     docker_command = 'singularity'
-    #bind_paths = '/scratch/zt1/project/abhinav2-prj/user/pulkit'
-    username = getpass.getuser()
-    bind_paths = '/scratch/zt1/project/abhinav2-prj/user/{}'.format(username)
-
+    bind_paths = '/scratch/zt1/project/abhinav2-prj/user/pulkit'
     image_path = '/scratch/zt1/project/abhinav2-prj/user/pulkit/orvit_pt/cotracker.sif'
-    #path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
-
-    path_to_transfer = os.path.join('/tmp/{}/'.format(username), args.dataset)
+    path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
+    
     
     
     if args.dataset == 'ssv2':
@@ -286,6 +281,7 @@ if 'zara' in hostname:
     if args.use_points:
         pt_data_dir = data_paths['points_info']
         pt_transfer_command = f'{full_docker_command} {rsync_command} {pt_data_dir} {path_to_transfer}'
+        pt_data_dir = os.path.join(path_to_transfer, point_info_name)
         transfer_commands.append(pt_transfer_command)
     destination_dir = path_to_transfer
 
@@ -294,6 +290,9 @@ else:
         transfer_commands, len_check_commands = get_transfer_commands(data_paths, 
                                                     destination_dir, dataset,
                                                     touch_file_path)
+        if args.use_points:
+            pt_data_dir = os.path.join(destination_dir, point_info_name)
+        breakpoint()
     else:
         destination_dir = data_paths['videos']
 # breakpoint()
@@ -337,13 +336,15 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'--num_workers {args.cores} '
         cmd += f'--num_frames {args.num_frames} '
         cmd += '--sampling_rate 16 '
-        cmd += '--num_spatial_views 3 '
+        cmd += '--num_spatial_views 1 '
         cmd += '--num_temporal_views 1 '
         cmd += f'--vid_base_dir {destination_dir} '
         cmd += f'--test_batch_size {args.test_batch_size} '
         cmd += f'--wandb_id {wandb_id} '
         cmd += f'--dataset {args.dataset} '
-        cmd += f'--model_type {args.model_type} '
+        if args.use_points:
+            cmd += f'--pt_data_dir {pt_data_dir} --point_info_name {point_info_name} '
+            cmd += '--use_points '
             
        
         nowfile.write(f'{cmd}\n')
@@ -415,10 +416,7 @@ with open(slurm_script_path, 'w') as slurmfile:
         if not args.gpu is None:
             # if hostname in {'nexus', 'vulcan'}:
             if 'nexus' in hostname:
-                #slurmfile.write(f'#SBATCH --gres=gpu:{args.gpu}\n')
-
-                #TODO debug
-                slurmfile.write(f'#SBATCH --gres=gpu:rtxa5000:{args.gpu}\n')
+                slurmfile.write(f'#SBATCH --gres=gpu:{args.gpu}\n')
             else:
 
                 if args.gpu_to_use == 'a100':
@@ -428,22 +426,12 @@ with open(slurm_script_path, 'w') as slurmfile:
                     
         else:
             raise ValueError("Specify the gpus for scavenger")
-    elif args.qos == 'medium':
-        # slurmfile.write("#SBATCH  --qos vulcan-high\n")
-        # slurmfile.write("#SBATCH --partition vulcan-ampere\n")
-        # slurmfile.write("#SBATCH --account=vulcan-abhinav\n")
-
-
-        slurmfile.write("#SBATCH  --qos medium\n")
-        slurmfile.write("#SBATCH --partition tron\n")
-
-        slurmfile.write("#SBATCH --account=nexus\n")
-    
+    elif args.qos == 'high':
+        slurmfile.write("#SBATCH  --qos vulcan-high\n")
+        slurmfile.write("#SBATCH --partition vulcan-ampere\n")
+        slurmfile.write("#SBATCH --account=vulcan-abhinav\n")
         slurmfile.write("#SBATCH --time=%d:00:00\n" % args.nhrs)
-        # slurmfile.write("#SBATCH --gres=gpu:%d\n" % args.gpu)
-
-        #TODO debug
-        slurmfile.write("#SBATCH --gres=gpu:rtxa6000:%d\n" % args.gpu)
+        slurmfile.write("#SBATCH --gres=gpu:%d\n" % args.gpu)
         slurmfile.write("#SBATCH --cpus-per-task=%d\n" % args.cores)
         slurmfile.write("#SBATCH --mem=%dG\n" % args.mem)
     if 'nexus' in hostname:
@@ -466,14 +454,10 @@ with open(slurm_script_path, 'w') as slurmfile:
         slurmfile.write("export SCRATCH_DIR=tmp\n")
         slurmfile.write("export WANDB_MODE=offline\n")
 
-        #hub_home = '/scratch/zt1/project/abhinav2-prj/user/pulkit/'
-
-        username = getpass.getuser()
-        hub_home = '/scratch/zt1/project/abhinav2-prj/user/{}/'.format(username)
-
+        hub_home = '/scratch/zt1/project/abhinav2-prj/user/pulkit/'
 
     slurmfile.write(f'export TORCH_HOME={hub_home}\n')
-    slurmfile.write(f'export HF_HOME={hub_home}huggingface\n')
+    slurmfile.write(f'export HF_HOME={hub_home}/huggingface\n')
 
     slurmfile.write(f'mkdir -p {destination_dir}\n')
     if 'zara' in hostname:
