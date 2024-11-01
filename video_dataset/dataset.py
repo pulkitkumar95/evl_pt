@@ -14,9 +14,12 @@ except ImportError:
 
 import torch
 from torchvision import transforms
-
+from .omni_vis import check_vis
 from .transform import create_random_augment, random_resized_crop
 from einops import rearrange
+from .pt_dataset import PT_Sampler, process_points
+from functools import partial
+from collections import defaultdict as DefaultDict
 
 class VideoDataset(torch.utils.data.Dataset):
 
@@ -57,17 +60,29 @@ class VideoDataset(torch.utils.data.Dataset):
                                              '20bn-something-something-v2')
 
         self.total_views = num_spatial_views * num_temporal_views
+        if cfg.use_points:
+            self.pt_sampler = PT_Sampler(cfg)
+            self.get_temporal_data = partial(self.pt_sampler.get_temporal_data,
+                                              num_patches=cfg.num_patches,
+                                              num_points_to_sample=cfg.num_points_to_sample,
+                                              return_mask=False)
+        self.use_points = cfg.use_points
         
 
 
     def __len__(self):
         return len(self.data_list)
     
-
-
-
+    def check_pt_vis(self, pt_dict, frames, num_crop=0):
+        renorm_frames = frames.clone()
+        renorm_frames = renorm_frames.permute(1, 2, 3, 0)
+        renorm_frames = (renorm_frames * self.std) + self.mean
+        renorm_frames = renorm_frames.numpy()
+        check_vis(renorm_frames.copy() * 255, pt_dict['pred_tracks'], 
+                  pt_dict['pred_visibility'],
+                  pt_dict['per_point_queries'], 
+                  gif_path=f'check_vis/vis_{num_crop}.gif')
     
-
     def __getitem__(self, idx):
         line = self.data_list[idx]
         path, label = line.split(' ')
@@ -75,8 +90,10 @@ class VideoDataset(torch.utils.data.Dataset):
         label = int(label)
 
         path = os.path.join(self.vid_base_dir, path)
+        pt_dict = {}
         if DECORD_AVAILABLE:
             frames = VideoReader(path, num_threads=1)
+            duration = len(frames)
         else:
             frames = {}
             container = av.open(path)
@@ -87,6 +104,8 @@ class VideoDataset(torch.utils.data.Dataset):
 
         if self.random_sample:
             frame_idx = self._random_sample_frame_idx(len(frames))
+            if self.use_points:
+                pt_dict = self.pt_sampler.get_pt_info(path, len(frames), frame_idx)
             if DECORD_AVAILABLE:
                 frames = frames.get_batch(frame_idx).asnumpy()
                 frames = torch.as_tensor(frames / 255.).float()
@@ -109,18 +128,25 @@ class VideoDataset(torch.utils.data.Dataset):
 
             frames = (frames - self.mean) / self.std
             frames = frames.permute(3, 0, 1, 2) # C, T, H, W
-            frames = random_resized_crop(
+            frames, cropped_coords, resized_factor = random_resized_crop(
                 frames, self.spatial_size, self.spatial_size,
             )
-            
+            if self.use_points:
+                # resizing is done post-cropping, hence no need to pass resized_factor
+                pt_dict = process_points(pt_dict, 
+                                         cropped_coords=cropped_coords, 
+                                         scale_factor=None)
+                pt_dict = self.get_temporal_data(pt_dict)
+               
+
         else:
-            frames = self._generate_temporal_crops_idx_with_crops(frames)
+            frames, temporal_indices_per_crop = self._generate_temporal_crops_idx_with_crops(frames)
             # frames = [x.to_rgb().to_ndarray() for x in frames]
             frames = torch.as_tensor(np.stack(frames))
-            num_crops, temporal_len, _, _, _ = frames.size()
+            num_temporal_crops, temporal_len, _, _, _ = frames.size()
         
-            if num_crops > 1:
-                frames = rearrange(frames, 'n t h w -> (n t) h w c')
+            if num_temporal_crops > 1:
+                frames = rearrange(frames, 'n t h w c -> (n t) h w c')
             else:
                 frames = frames.squeeze(0)
 
@@ -135,19 +161,37 @@ class VideoDataset(torch.utils.data.Dataset):
             else:
                 new_height = frames.size(-2) * self.spatial_size // frames.size(-1)
                 new_width = self.spatial_size
+            pt_scale_factor = torch.Tensor([new_width/frames.size(-1), 
+                                            new_height/frames.size(-2)]).view(1, 1, 2)
             frames = torch.nn.functional.interpolate(
                 frames, size=(new_height, new_width),
                 mode='bilinear', align_corners=False,
             )
 
-            frames = self._generate_spatial_crops(frames)
+            frames, crop_coords = self._generate_spatial_crops(frames)
             # frames = sum([self._generate_temporal_crops(x) for x in frames], [])
+                    
+               
 
             frames = torch.stack(frames)
-            if num_crops > 1:
-                frames = rearrange(frames, '(n t) h w c -> n t h w c', n=num_crops)
+            frames = rearrange(frames, 's_crops c (t_crops t) h w -> (s_crops t_crops) c t h w',
+                                   t_crops=self.num_temporal_views, 
+                                   s_crops=self.num_spatial_views)
+            if self.use_points:
+                pt_dict = self.pt_sampler.get_pt_info(path, duration)
+                pt_dicts = self.pt_sampler.process_points_with_crops(
+                   pt_dict, duration, temporal_indices_per_crop, crop_coords, 
+                    pt_scale_factor
+                )
+                final_pt_dict = DefaultDict(list)
+                for pt_dict in pt_dicts:
+                    crop_pt_dict = self.get_temporal_data(pt_dict)
+                    for k, v in crop_pt_dict.items():
+                        final_pt_dict[k].append(v)
+                pt_dict = {k: torch.stack(v) for k, v in final_pt_dict.items()}
+                
 
-        return frames, label
+        return frames, label, pt_dict
 
 
     def _generate_temporal_crops(self, frames):
@@ -190,7 +234,7 @@ class VideoDataset(torch.utils.data.Dataset):
         for crop_idx in crop_indices:
             crops.append(frames.get_batch(crop_idx).asnumpy())
 
-        return crops
+        return crops, crop_indices
         
 
 
@@ -200,19 +244,23 @@ class VideoDataset(torch.utils.data.Dataset):
             h_st = (frames.size(-2) - self.spatial_size) // 2
             w_st = (frames.size(-1) - self.spatial_size) // 2
             h_ed, w_ed = h_st + self.spatial_size, w_st + self.spatial_size
-            return [frames[:, :, h_st: h_ed, w_st: w_ed]]
+            crop_coords = [w_st, w_ed, h_st, h_ed]
+            return [frames[:, :, h_st: h_ed, w_st: w_ed]], [crop_coords]
 
         elif self.num_spatial_views == 3:
             assert min(frames.size(-2), frames.size(-1)) == self.spatial_size
             crops = []
+            crop_coords = []
             margin = max(frames.size(-2), frames.size(-1)) - self.spatial_size
             for st in (0, margin // 2, margin):
                 ed = st + self.spatial_size
                 if frames.size(-2) > frames.size(-1):
                     crops.append(frames[:, :, st: ed, :])
+                    crop_coords.append([0, frames.size(-1), st, ed])
                 else:
                     crops.append(frames[:, :, :, st: ed])
-            return crops
+                    crop_coords.append([st, ed, 0, frames.size(-2)])
+            return crops, crop_coords
         
         else:
             raise NotImplementedError()
