@@ -2,7 +2,7 @@
 
 def select_model_func(args):
     model_type = args.model_type
-    assert model_type in ['evl', 'oursbasic', 'evlbasic', 'evlcrossmotion']
+    assert model_type in ['evl', 'oursbasic', 'evlbasic', 'evlselfcrossmotion']
 
     print('load models from modeltype {}...'.format(model_type))
 
@@ -65,10 +65,10 @@ def select_model_func(args):
         num_frames=args.num_frames,
     )
         
-    elif model_type == 'evlcrossmotion':
-        from model_crossmotion import EVLTransformerCrossmotion
+    elif model_type == 'evlselfcrossmotion':
+        from model_selfcrossmotion import EVLTransformerSelfCrossmotion
 
-        model = EVLTransformerCrossmotion(
+        model = EVLTransformerSelfCrossmotion(
         backbone_name=args.backbone,
         backbone_type=args.backbone_type,
         backbone_path=args.backbone_path,

@@ -241,9 +241,18 @@ def main():
             data_slice = data[split_size * j: split_size * (j + 1)]
             labels_slice = labels[split_size * j: split_size * (j + 1)]
 
-            with torch.cuda.amp.autocast(args.fp16):
-                logits = model(data_slice)
-                loss = criterion(logits, labels_slice)
+            if args.use_points:
+                pt_coords_slice = pt_coords[split_size * j: split_size * (j + 1)]
+                pt_visibility_slice = pt_visibility[split_size * j: split_size * (j + 1)]
+                pt_grid_indices_slice = pt_grid_indices[split_size * j: split_size * (j + 1)]
+
+                with torch.cuda.amp.autocast(args.fp16):
+                    logits = model(data_slice, pt_coords_slice, pt_visibility_slice, pt_grid_indices_slice)
+                    loss = criterion(logits, labels_slice)
+            else:
+                with torch.cuda.amp.autocast(args.fp16):
+                    logits = model(data_slice)
+                    loss = criterion(logits, labels_slice)
                 
             if labels.dtype == torch.long: # no mixup, can calculate accuracy
                 hit1 += (logits.topk(1, dim=1)[1] == labels_slice.view(-1, 1)).sum().item()

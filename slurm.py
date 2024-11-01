@@ -128,9 +128,10 @@ parser.add_argument('--use_docker', action='store_true')
 parser.add_argument('--seed', type=int, default=42,  help='Random seed')
 parser.add_argument('--point_grid_size', type=int, default=16,  help='Point grid size')
 
+parser.add_argument('--pt_data_dir', type=str, default=None, help='path to point data directory')
+parser.add_argument('--point_info_name', type=str, default=None, help='name of point info file')
 
-
-
+parser.add_argument('--model_type', type=str, default='evlbasic',  help='model type')
 
 
 
@@ -185,8 +186,8 @@ params = [(i,) for i in range(1)]
 dataset = args.dataset
 print("Running on dataset: %s" % dataset) 
 
-point_info_name = 'cotracker2_16_uniform_8_corrected'
-
+#point_info_name = 'cotracker2_16_uniform_8_corrected'
+point_info_name = 'cotracker2_14_uniform_8_corrected' # for clip
 
 
 
@@ -253,10 +254,13 @@ if 'zara' in hostname:
     transfer_commands = []
     use_docker = True
     docker_command = 'singularity'
-    bind_paths = '/scratch/zt1/project/abhinav2-prj/user/pulkit'
+    #bind_paths = '/scratch/zt1/project/abhinav2-prj/user/pulkit'
+    username = getpass.getuser()
+    bind_paths = '/scratch/zt1/project/abhinav2-prj/user/{}'.format(username)
+
     image_path = '/scratch/zt1/project/abhinav2-prj/user/pulkit/orvit_pt/cotracker.sif'
-    path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
-    
+    #path_to_transfer = os.path.join('/tmp/pulkit/', args.dataset)
+    path_to_transfer = os.path.join('/tmp/{}/'.format(username), args.dataset)
     
     
     if args.dataset == 'ssv2':
@@ -292,9 +296,11 @@ else:
                                                     touch_file_path)
         if args.use_points:
             pt_data_dir = os.path.join(destination_dir, point_info_name)
-        breakpoint()
     else:
         destination_dir = data_paths['videos']
+
+        if args.use_points:
+            pt_data_dir = data_paths['points_info']
 # breakpoint()
 
 
@@ -342,6 +348,7 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'--test_batch_size {args.test_batch_size} '
         cmd += f'--wandb_id {wandb_id} '
         cmd += f'--dataset {args.dataset} '
+        cmd += f'--model_type {args.model_type} '
         if args.use_points:
             cmd += f'--pt_data_dir {pt_data_dir} --point_info_name {point_info_name} '
             cmd += '--use_points '
@@ -454,7 +461,10 @@ with open(slurm_script_path, 'w') as slurmfile:
         slurmfile.write("export SCRATCH_DIR=tmp\n")
         slurmfile.write("export WANDB_MODE=offline\n")
 
-        hub_home = '/scratch/zt1/project/abhinav2-prj/user/pulkit/'
+        # hub_home = '/scratch/zt1/project/abhinav2-prj/user/pulkit/'
+
+        username = getpass.getuser()
+        hub_home = '/scratch/zt1/project/abhinav2-prj/user/{}/'.format(username)
 
     slurmfile.write(f'export TORCH_HOME={hub_home}\n')
     slurmfile.write(f'export HF_HOME={hub_home}/huggingface\n')
