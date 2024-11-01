@@ -42,4 +42,4 @@ torchrun --nproc_per_node=${num_nodes} --master_port=19599  \
     --num_spatial_views 3 \
     --num_temporal_views 3 \
     --vid_base_dir "${vid_path}" \
-    --model_type "evlbasic"
+    --model_type "evlselfcrossmotion"

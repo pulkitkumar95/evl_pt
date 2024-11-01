@@ -145,7 +145,8 @@ class EVLDecoderCrossmotion(nn.Module):
         frame_features = frame_features[:,:,1:,:] # we don't use cls token here
 
         B, T, N, C = frame_features.size()
-        assert (crosspatch_motion_features.shape == (B,T,N,C))
+        _, M, D = crosspatch_motion_features.shape
+        assert (_ == B)
 
         x = self.cls_token.view(1, 1, -1).repeat(B, 1, 1)
         

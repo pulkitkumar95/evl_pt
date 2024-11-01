@@ -4,6 +4,8 @@ __pycache__
 
 runs/
 
+checkpoints
+out_new_pt
 video_dataset/io_internal.py
 wandb/
 checkpoints/ViT-B-16.pt
