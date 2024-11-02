@@ -132,7 +132,7 @@ parser.add_argument('--pt_data_dir', type=str, default=None, help='path to point
 parser.add_argument('--point_info_name', type=str, default=None, help='name of point info file')
 
 parser.add_argument('--model_type', type=str, default='evlbasic',  help='model type')
-parser.add_argument('--resume_path', type=str, default=None,  help='resume path. /xxx/xxx.pt')
+#parser.add_argument('--resume_path', type=str, default=None,  help='resume path. /xxx/xxx.pt')
 
 
 
@@ -350,7 +350,7 @@ with open(f'{args.base_dir}/{args.output_dir}/{args.env}/now.txt', "w") as nowfi
         cmd += f'--wandb_id {wandb_id} '
         cmd += f'--dataset {args.dataset} '
         cmd += f'--model_type {args.model_type} '
-        cmd += f'--resume_path {args.resume_path} '
+        #cmd += f'--resume_path {args.resume_path} '
         
         if args.use_points:
             cmd += f'--pt_data_dir {pt_data_dir} --point_info_name {point_info_name} '
