@@ -216,7 +216,7 @@ def main():
     if args.eval_only:
         print('Running in eval_only mode.')
         model.eval()
-        evaluate(model, val_loader)
+        evaluate(model, val_loader, args=args)
         return
     else:
         assert args.train_list_path is not None, 'Train list path must be specified if not in eval_only mode.'
@@ -293,7 +293,7 @@ def main():
         if (i + 1) % args.eval_freq == 0:
             print('Start model evaluation at step', i + 1)
             model.eval()
-            evaluate(model, val_loader, wandb_run)
+            evaluate(model, val_loader, wandb_run, args)
             model.train()
 
         
@@ -301,7 +301,7 @@ def main():
         batch_st = datetime.now()
 
 
-def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader, wandb_run=None):
+def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader, wandb_run=None, args=None):
     tot, hit1, hit5 = 0, 0, 0
     eval_st = datetime.now()
     for batch_idx, (data, labels, pt_dict) in enumerate(loader):
@@ -309,17 +309,23 @@ def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader, wandb_
         batch_size, num_views = data.shape[:2]
         data = data.view(batch_size * num_views, *data.shape[2:])
         if pt_dict:
-            pt_coords = pt_dict['pred_tracks'].cuda()
+            pt_coords = pt_dict['pred_tracks'].float()
             pt_coords = pt_coords.view(batch_size * num_views, *pt_coords.shape[2:])
             pt_grid_indices = pt_dict['pred_grid_indices'].cuda()
             pt_grid_indices = pt_grid_indices.view(batch_size * num_views, *pt_grid_indices.shape[2:])
-            pt_visibility = pt_dict['pred_visibility'].cuda()
+            pt_visibility = pt_dict['pred_visibility'].float()
             pt_visibility = pt_visibility.view(batch_size * num_views, *pt_visibility.shape[2:])
             
         labels = labels.unsqueeze(-1)
 
         with torch.no_grad():
-            logits = model(data)
+
+            if args.use_points:
+                logits = model(data, pt_coords, pt_visibility, pt_grid_indices)
+
+            else:
+                logits = model(data)
+
             scores = logits.softmax(dim=-1)
             scores = scores.view(batch_size, num_views, -1)
             scores = scores.mean(dim=1)
