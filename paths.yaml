@@ -45,7 +45,7 @@ k400:
     train_videos: /opt/data/kinetics/train_256_new
     val_videos: /opt/data/kinetics/val_256_new
     # points_info: /opt/data/point_tracking/feat_dumps/kinetics
-    points_info: /scratch/zt1/project/abhinav2-prj/user/pulkit/kineticss
+    points_info: /scratch/zt1/project/abhinav2-prj/user/pulkit/kinetics
     destination: /tmp/huangshy/kinetics
     split_info: '/scratch/zt1/project/abhinav2-prj/user/huangshy/dataset_csvs'
     

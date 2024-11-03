@@ -286,7 +286,8 @@ if 'zara' in hostname:
 
     if args.use_points:
         pt_data_dir = data_paths['points_info']
-        pt_transfer_command = f'{full_docker_command} {rsync_command} {pt_data_dir} {path_to_transfer}'
+        #pt_transfer_command = f'{full_docker_command} {rsync_command} {pt_data_dir} {path_to_transfer}'
+        pt_transfer_command = f'{rsync_command} {pt_data_dir} {path_to_transfer}'
         pt_data_dir = os.path.join(path_to_transfer, point_info_name)
         transfer_commands.append(pt_transfer_command)
     destination_dir = path_to_transfer
