@@ -4,7 +4,7 @@ ssv2:
     # points_info: /fs/cfar-projects/actionloc/bounce_back/co-trakcer_mod/feats_sans_tskip_sans_feat/somethingv2/
     points_info: /fs/cfar-projects/actionloc/bounce_back/point_tracking/feat_dumps/somethingv2/
     split_info: '/fs/cfar-projects/actionloc/bounce_back/dataset_csvs'
-    destination: '/scratch0/huangshy/ssv2'
+    destination: '/scratch1/huangshy/ssv2'
 
   zaratan:
     videos: /scratch/zt1/project/abhinav2-prj/user/pulkit/somethingv2/20bn-something-something-v2

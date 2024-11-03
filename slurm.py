@@ -224,6 +224,7 @@ else:
 
 # for few shot, everything is being transferred to scratch1
 destination_dir = destination_dir.replace('scratch0', '$SCRATCH_DIR').replace('scratch1', '$SCRATCH_DIR')
+
 if 'nexus' in hostname:
     user_running = os.getlogin()
     destination_dir = destination_dir.replace('pulkit',user_running )
@@ -295,8 +296,15 @@ else:
         transfer_commands, len_check_commands = get_transfer_commands(data_paths, 
                                                     destination_dir, dataset,
                                                     touch_file_path)
+        # if args.use_points:
+        #     pt_data_dir = os.path.join(destination_dir, point_info_name)
+        
+        # shirley
+        destination_dir = data_paths['videos']
         if args.use_points:
-            pt_data_dir = os.path.join(destination_dir, point_info_name)
+            pt_data_dir = data_paths['points_info']
+
+
     else:
         destination_dir = data_paths['videos']
 
